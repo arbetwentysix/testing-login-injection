@@ -1,10 +1,15 @@
-const mysql = require('mysql2/promise');
+import pkg from 'pg';
+import dotenv from 'dotenv';
 
-const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'login_system'
+dotenv.config();
+
+const { Pool } = pkg;
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL, // ambil dari .env
+  ssl: {
+    rejectUnauthorized: false, // penting untuk koneksi ke Vercel Postgres/Neon
+  },
 });
 
-module.exports = db;
+export default db;

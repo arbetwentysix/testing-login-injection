@@ -65,7 +65,7 @@ app.post('/login', async (req, res) => {
     // === PARAMETERIZED QUERY (prepared statement) ===
     // Gunakan db.execute dengan placeholder (?) untuk mencegah injection
     const [rows] = await db.execute(
-      'SELECT id, username, password FROM users WHERE username = ? LIMIT 1',
+      'SELECT id, username, password FROM users WHERE username = $1 LIMIT 1',
       [username]
     );
     const user = rows[0];
@@ -115,10 +115,9 @@ app.post('/login-unsafe-sql', async (req, res) => {
     // Contoh berbahaya: username = "admin' OR '1'='1"
     // const sql = `SELECT id, username, password FROM users WHERE username = '${username}' LIMIT 1`;
     const sql = `SELECT id, username, password FROM users WHERE username = '${username}' AND password = '${password}' LIMIT 1`;
-    
-    // Menggunakan db.query yang mengeksekusi string mentah
-    const [rows] = await db.query(sql); // db.query -> raw SQL
-    const user = rows[0];
+    const result = await db.query(sql);
+    const user = result.rows[0];
+
 
     if (!user) {
       return res.status(401).send('Username atau Password salah.');
@@ -143,24 +142,21 @@ app.post('/register', async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // 1. Cek apakah username sudah digunakan
-    const [rows] = await db.execute(
-      'SELECT username FROM users WHERE username = ?',
+    const result = await db.query(
+      'SELECT username FROM users WHERE username = $1',
       [username]
     );
 
-    if (rows.length > 0) {
+    if (result.rows.length > 0) {
       req.session.errorMessage = 'Username sudah terdaftar.';
       return res.redirect('/register');
     }
-
-    // 2. Hash password sebelum disimpan
+  
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Simpan user baru ke database
-    await db.execute(
-      'INSERT INTO users (username, password, role) VALUES (?, ?, "user")',
-      [username, hashedPassword]
+    await db.query(
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3)',
+      [username, hashedPassword, 'user']
     );
 
     res.redirect('/login');
@@ -181,7 +177,7 @@ app.post('/register-unsafe', async (req, res) => {
   try {
     // 1. Cek apakah username sudah digunakan
     const [rows] = await db.execute(
-      'SELECT username FROM users WHERE username = ?',
+      'SELECT username FROM users WHERE username = $1',
       [username]
     );
 
@@ -194,10 +190,11 @@ app.post('/register-unsafe', async (req, res) => {
     const hashedPassword = password;
 
     // 3. Simpan user baru ke database
-    await db.execute(
-      'INSERT INTO users (username, password, role) VALUES (?, ?, "user")',
-      [username, hashedPassword]
+    await db.query(
+      'INSERT INTO users (username, password, role) VALUES ($1, $2, $3)',
+      [username, password, 'user']
     );
+
 
     res.redirect('/login');
     
