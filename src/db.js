@@ -1,15 +1,11 @@
-import pkg from 'pg';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const { Pool } = pkg;
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const db = new Pool({
-  connectionString: process.env.DATABASE_URL, // ambil dari .env
+  connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // penting untuk koneksi ke Vercel Postgres/Neon
+    rejectUnauthorized: false,
   },
 });
 
-export default db;
+module.exports = db;

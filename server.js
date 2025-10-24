@@ -64,11 +64,12 @@ app.post('/login', async (req, res) => {
   try {
     // === PARAMETERIZED QUERY (prepared statement) ===
     // Gunakan db.execute dengan placeholder (?) untuk mencegah injection
-    const [rows] = await db.execute(
+    const result = await db.query(
       'SELECT id, username, password FROM users WHERE username = $1 LIMIT 1',
       [username]
     );
-    const user = rows[0];
+    const user = result.rows[0];
+
 
     if (!user) {
       return res.status(401).send('Username atau Password salah.');
@@ -176,27 +177,23 @@ app.post('/register-unsafe', async (req, res) => {
 
   try {
     // 1. Cek apakah username sudah digunakan
-    const [rows] = await db.execute(
+    const result = await db.query(
       'SELECT username FROM users WHERE username = $1',
       [username]
     );
 
-    if (rows.length > 0) {
+    if (result.rows.length > 0) {
       req.session.errorMessage = 'Username sudah terdaftar.';
       return res.redirect('/register');
     }
 
-    // 2. Hash password sebelum disimpan
-    const hashedPassword = password;
-
-    // 3. Simpan user baru ke database
     await db.query(
       'INSERT INTO users (username, password, role) VALUES ($1, $2, $3)',
       [username, password, 'user']
     );
 
 
-    res.redirect('/login');
+    res.redirect('/login-unsafe-sql');
     
   } catch (error) {
     console.error('Database/Bcrypt Error during registration:', error);
